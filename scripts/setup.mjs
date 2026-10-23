@@ -6,7 +6,7 @@
 //   pnpm run setup                         # the pinned submodule (git submodule update --init first)
 //   WEVIR_DIR=../wevir pnpm run setup      # another checkout
 import { spawnSync } from 'node:child_process';
-import { existsSync, lstatSync, readlinkSync, rmSync, symlinkSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readlinkSync, rmSync, symlinkSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { chosenWevirDir, LINK, WEB_ROOT } from './wevir-dir.mjs';
 
@@ -17,13 +17,25 @@ if (!existsSync(join(target, 'apps/desktop/package.json'))) {
   process.exit(1);
 }
 
-/** Replaces `path` with a symlink to `to` (relative). Refuses to touch a real directory. */
+/**
+ * pnpm 12 checks the install before every `pnpm run`, which in a fresh clone leaves a `node_modules` holding only its own
+ * dotfiles (`.modules.yaml`, `.pnpm-workspace-state-v1.json`). That one is safe to replace; anything with packages is not.
+ */
+function onlyPnpmState(path) {
+  return readdirSync(path).every((name) => name.startsWith('.'));
+}
+
+/** Replaces `path` with a symlink to `to` (relative). Refuses to touch a real directory with content of its own. */
 function link(path, to) {
   const wanted = relative(WEB_ROOT, to) || '.';
   let stat;
   try {
     stat = lstatSync(path);
   } catch {
+    stat = undefined;
+  }
+  if (stat?.isDirectory() && onlyPnpmState(path)) {
+    rmSync(path, { recursive: true, force: true });
     stat = undefined;
   }
   if (stat !== undefined && !stat.isSymbolicLink()) {
