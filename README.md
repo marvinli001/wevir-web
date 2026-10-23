@@ -89,6 +89,7 @@ To try it end to end without a hosted relay:
 | `src/computers-page.tsx`, `src/computer-slot.tsx` | The computer list, and the current computer in the sidebar |
 | `src/csp.ts` | The Content Security Policy and security headers (tests keep `_headers` and `vercel.json` in sync) |
 | `.github/workflows/web.yml` | Checks and builds every push. Deploys `main` to Cloudflare when `CLOUDFLARE_API_TOKEN` is set |
+| `.github/workflows/relay.yml` | Deploys the official relay (wevir's `apps/relay-worker`) to `relay.wevir.si` from the pinned commit when the pin changes on `main`, after its protocol tests. Needs `SOURCE_TAG_KEY` as well |
 
 To move to a newer wevir, update the submodule (`git -C wevir checkout <commit>`), run `pnpm run setup`, check, and commit the new pin.
 
