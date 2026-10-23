@@ -13,12 +13,8 @@ import {
 import { deviceStaticKey, generateDeviceKey } from './device-key';
 import { type ComputerRecord, loadIdentity, putComputer, setCurrentComputerId } from './store';
 
-/**
- * The platform this browser reports when pairing. The computer shows it in its device list and treats web devices
- * differently (idle removal) once it knows the `web` platform; a computer without it rejects `web`, so this stays
- * `other` until the pinned wevir has that platform.
- */
-export const DEVICE_PLATFORM: DevicePlatform = 'other';
+/** The platform this browser reports when pairing. Computers that offer web pairing links (protocol 0.117.0) know it. */
+export const DEVICE_PLATFORM: DevicePlatform = 'web';
 
 export type PairingLink =
   | { kind: 'ok'; payload: PairingPayload & { relayUrl: string } }
