@@ -1,0 +1,5 @@
+/* The renderer's styles, with Tailwind told where to look for class names: the renderer's sources (behind `.wevir`,
+   which git ignores, so automatic detection skips it) and this shell's own. */
+@import "../.wevir/apps/desktop/src/renderer/src/index.css";
+@source "../.wevir/apps/desktop/src/renderer/src";
+@source "./";

@@ -1,0 +1,21 @@
+{
+  "name": "wevir-web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Wevir in the browser: the desktop app's interface, connected to your computer through an end-to-end encrypted relay.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@12.6.0",
+  "engines": {
+    "node": ">=24.15"
+  },
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "node scripts/run.mjs tsc --noEmit -p tsconfig.json",
+    "lint": "node scripts/run.mjs biome check .",
+    "test": "node scripts/run.mjs vitest run --dir src"
+  }
+}

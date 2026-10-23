@@ -1,0 +1,99 @@
+# Builds the site from the wevir commit the submodule pins, and deploys it to Cloudflare from main when the
+# CLOUDFLARE_API_TOKEN secret is set. Without the secret the deploy job is skipped and only the checks run.
+name: Web
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+          persist-credentials: false
+
+      # The version comes from wevir's packageManager; the dependencies are wevir's, under its lockfile.
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: wevir/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: wevir/.node-version
+          cache: pnpm
+          cache-dependency-path: wevir/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm run setup
+        env:
+          CI: '1'
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Test
+        run: pnpm run test
+
+      - name: Build
+        run: pnpm run build
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: site
+          path: dist
+          retention-days: 7
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Token present
+        id: token
+        run: echo "present=${{ env.CLOUDFLARE_API_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        if: steps.token.outputs.present == 'true'
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v8
+        if: steps.token.outputs.present == 'true'
+        with:
+          name: site
+          path: dist
+
+      - uses: actions/setup-node@v7
+        if: steps.token.outputs.present == 'true'
+        with:
+          node-version: 24
+
+      - name: Deploy
+        if: steps.token.outputs.present == 'true'
+        run: npx --yes wrangler@4 deploy
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Skipped
+        if: steps.token.outputs.present != 'true'
+        run: echo "CLOUDFLARE_API_TOKEN is not set; nothing deployed."

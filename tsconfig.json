@@ -1,0 +1,23 @@
+{
+  // The renderer's sources come along through the `@wevir-renderer` and `@/` paths and are checked with the renderer's
+  // settings (bundler resolution, DOM only, the `@wevir/source` condition for workspace packages).
+  "extends": "./.wevir/tsconfig.base.json",
+  "compilerOptions": {
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "types": ["vite/client"],
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@wevir-renderer": ["./.wevir/apps/desktop/src/renderer/src/embed.ts"],
+      "@/*": ["./.wevir/apps/desktop/src/renderer/src/*"]
+    }
+  },
+  "include": ["src", ".wevir/apps/desktop/src/renderer/src/env.d.ts"],
+  // Tests run in Vitest from the wevir checkout; vite.config.ts runs in Node.
+  "exclude": ["src/**/*.test.ts"]
+}
