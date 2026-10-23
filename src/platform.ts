@@ -8,7 +8,6 @@ import {
   remoteTransport,
   type TransportFactory,
 } from '@wevir/client-sdk';
-import { CloseCode } from '@wevir/protocol';
 import {
   type HostConnectionSource,
   type Platform,
@@ -18,6 +17,7 @@ import {
 } from '@wevir-renderer';
 import { deviceStaticKey } from './device-key';
 import { pageUrl } from './paths';
+import { refusedByComputer } from './removal';
 import { type ComputerRecord, loadIdentity, updateComputer } from './store';
 
 const EXTERNAL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
@@ -153,8 +153,8 @@ export function computerConnection(computer: ComputerRecord | undefined): HostCo
 }
 
 /**
- * The computer closes a removed device's connections with `DEVICE_REVOKED`; its later handshakes just fail, which
- * looks like an offline computer. So the close is the one chance to tell: mark the computer and show the list.
+ * A computer that no longer accepts this browser (`refusedByComputer`) is marked removed and the list opens, so neither
+ * a Retry button nor a reload sends it another handshake it will refuse.
  */
 function watchRemoval(computer: ComputerRecord, transport: TransportFactory): TransportFactory {
   return (url, handlers) =>
@@ -162,7 +162,7 @@ function watchRemoval(computer: ComputerRecord, transport: TransportFactory): Tr
       ...handlers,
       onClose(info) {
         handlers.onClose(info);
-        if (info.code !== CloseCode.DEVICE_REVOKED) return;
+        if (!refusedByComputer(info)) return;
         void updateComputer(computer.routeId, (record) => ({
           ...record,
           removedAt: new Date().toISOString(),
