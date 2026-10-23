@@ -1,41 +1,39 @@
 # Wevir Web
 
-Wevir in the browser. This is the [Wevir](https://github.com/marvinli001/wevir) desktop app's interface, built as a static site, that connects to a computer running Wevir through a relay. The sessions, projects and agents stay on that computer; the browser shows them and sends your messages and approvals.
+The [Wevir](https://github.com/marvinli001/wevir) desktop interface as a static site, connected to a computer running Wevir through a relay. Sessions, projects, and agents remain on that computer; the browser displays them and sends messages and approvals.
 
-The hosted version is at **https://web.wevir.si**. You can also build and host it yourself.
+Hosted at **https://web.wevir.si**; self-hosting supported.
 
-## Using it
+## Usage
 
-1. On the computer: **Settings → Devices**, turn on remote access with a relay, and add a device. Wevir shows a pairing link and QR code.
+1. On the computer: **Settings → Devices**, enable remote access with a relay, and add a device to get a pairing link and QR code.
 2. Open the link in the browser and choose **Pair**.
-3. Allow the request on the computer.
+3. Approve the request on the computer.
 
-The browser remembers the computer. Opening the site later reconnects on its own. **Computers** in the sidebar lists every computer this browser is paired with, where you can open, rename or remove them.
+Paired computers reconnect automatically. **Computers** in the sidebar lists every computer paired with this browser, with open, rename, and remove actions.
 
-### What the browser can't do
+### Desktop-only features
 
-The browser is a guest on another computer, so a few things stay on the desktop app:
+- Opening the computer's files in local apps, Finder, or an editor; file previews
+- Project creation (folder selection on the computer)
+- Built-in browser, computer use, sleep prevention, app updates, and the storage page
 
-- Opening the computer's files in local apps, Finder or an editor, and file previews
-- Creating projects (choosing a folder on the computer)
-- The built-in browser, computer use, preventing sleep, app updates, and the storage page
-
-What a paired browser can do is also limited by the permissions the computer gave it. By default it can read and work in sessions and read projects. Settings that change the computer, model providers, approval rules and the terminal need permissions you grant under **Settings → Devices** on the computer. Anything the browser isn't allowed to use is hidden or read-only.
+Device permissions set on the computer further limit access. Defaults: read and work in sessions, read projects. Computer settings, model providers, approval rules, and the terminal require permissions granted under **Settings → Devices**. Features without permission are hidden or read-only.
 
 ## Trust model
 
-- **End-to-end encryption.** The browser and the computer talk over a [Noise](https://noiseprotocol.org) channel: `XXpsk2` for pairing, `IK` for every reconnect, pinned to the computer's public key. The relay only forwards encrypted frames between them. It sees which route a connection is for, when, and how much data goes through. It never sees the content.
-- **Pairing link.** The secret is in the link's fragment (after `#`), which browsers never send to a server. The page takes it out of the address bar and history as soon as it loads. Each link works once, for a short time, and the computer still has to allow the request.
-- **Device key.** Each browser creates its own X25519 key with WebCrypto as a *non-extractable* key. Scripts on the page can use it, but can't read it out, and it is stored in the site's IndexedDB. Clearing the site's data deletes it. After that, pairing again is the only way back.
-- **The computer decides.** Every device has its own permissions, which the computer checks on every request. Removing a device on the computer closes its connections and rejects it from then on.
-- **The site itself.** The page's code holds the device key and sees everything you do in it. Trusting a hosted copy means trusting whoever serves it. The site has no backend, no analytics and no third-party scripts. Its Content Security Policy allows scripts only from its own origin, and connections only to itself and `wss://` relays. If you'd rather not trust a hosted copy, host your own (below). Pairing is per origin, so a self-hosted copy pairs separately.
+- **End-to-end encryption.** Browser and computer communicate over a [Noise](https://noiseprotocol.org) channel: `XXpsk2` for pairing, `IK` for reconnects, pinned to the computer's public key. The relay forwards encrypted frames only; it observes the route, timing, and traffic volume of each connection, never the content.
+- **Pairing link.** The secret is in the URL fragment (after `#`), which browsers never send to a server, and is removed from the address bar and history on load. Each link is single-use and short-lived, and still requires approval on the computer.
+- **Device key.** Each browser generates its own *non-extractable* X25519 key with WebCrypto, stored in the site's IndexedDB. Page scripts can use the key but cannot export it. Clearing site data deletes it and requires pairing again.
+- **Computer-side authorization.** Each device has its own permissions, checked by the computer on every request. Removing a device closes its connections and rejects it permanently.
+- **Site integrity.** The page's code holds the device key and sees all activity in it, so a hosted copy is only as trustworthy as its operator. No backend, analytics, or third-party scripts. The Content Security Policy allows scripts from the site's own origin only, and connections to itself and `wss://` relays only. Self-host to remove that dependency (below); pairing is per origin, so a self-hosted copy pairs separately.
 
 ## Self-hosting
 
-The build is a folder of static files. Any static host works if it:
+The build output is a folder of static files. Host requirements:
 
-- serves `index.html` for unknown paths (`/pair`, `/computers`), and
-- sends the headers in [`public/_headers`](public/_headers), especially the Content Security Policy.
+- `index.html` served for unknown paths (`/pair`, `/computers`)
+- The headers in [`public/_headers`](public/_headers), in particular the Content Security Policy
 
 ```sh
 git clone --recurse-submodules https://github.com/marvinli001/wevir-web.git
@@ -44,24 +42,24 @@ pnpm run setup
 pnpm run build      # → dist/
 ```
 
-- **Cloudflare** — [`wrangler.jsonc`](wrangler.jsonc) deploys `dist/` as Workers static assets. Change `name` and the `routes` domain, then run `npx wrangler deploy`. The `_headers` file in `dist/` sets the headers.
-- **Vercel** — [`vercel.json`](vercel.json) holds the build command, the SPA rewrite and the same headers.
-- **Elsewhere** — copy the CSP and other headers from `public/_headers` into the host's config.
+- **Cloudflare**: [`wrangler.jsonc`](wrangler.jsonc) deploys `dist/` as Workers static assets. Set `name` and the `routes` domain, then run `npx wrangler deploy`. Headers come from `_headers` in `dist/`.
+- **Vercel**: [`vercel.json`](vercel.json) defines the build command, SPA rewrite, and the same headers.
+- **Other hosts**: copy the CSP and other headers from `public/_headers` into the host configuration.
 
-A pairing link opens the official site. To pair with your own copy, keep everything from `#` onward and replace the part before it with your address, for example `https://wevir.example.com/pair#v=1&k=…`.
+Pairing links point to the official site. For a self-hosted copy, keep everything from `#` onward and replace the preceding part with your address, e.g. `https://wevir.example.com/pair#v=1&k=…`.
 
-The relay is configured on the computer, not on the site. The site connects to whichever relay the computer uses: the official one, or one you run from wevir's `apps/relay`. Self-hosted relays must use `wss://`, because the production CSP blocks plain `ws://`.
+The relay is configured on the computer, not on the site: the official relay, or one built from wevir's `apps/relay`. Self-hosted relays require `wss://`; the production CSP blocks `ws://`.
 
 ## Development
 
-You'll need Node 24.15 or newer and pnpm 12.
+Requirements: Node 24.15+ and pnpm 12.
 
-wevir-web has no npm dependencies of its own. The renderer lives in wevir, which this repository includes as a git submodule (`wevir/`), and the site builds against the exact commit the submodule pins. `pnpm run setup` installs wevir's dependencies with wevir's lockfile, then links `node_modules` to the desktop app's. React, Vite, Tailwind and the rest are therefore the same versions the desktop app ships. Don't run `pnpm install` in this repository.
+No npm dependencies of its own. The renderer comes from wevir, included as a git submodule (`wevir/`); the site builds against the pinned commit. `pnpm run setup` installs wevir's dependencies from wevir's lockfile and links `node_modules` to the desktop app's, so React, Vite, Tailwind, and other dependencies match the desktop app's versions. Do not run `pnpm install` in this repository.
 
 ```sh
 git submodule update --init
 pnpm run setup                          # uses ./wevir
-WEVIR_DIR=../wevir pnpm run setup       # or another wevir checkout, e.g. one you're changing
+WEVIR_DIR=../wevir pnpm run setup       # or another wevir checkout
 pnpm dev                                # http://localhost:5173
 ```
 
@@ -72,26 +70,26 @@ pnpm dev                                # http://localhost:5173
 | `pnpm preview` | Serves `dist/` with the production CSP (plus `ws://` for a local relay) |
 | `pnpm lint` / `pnpm typecheck` / `pnpm test` | Biome, TypeScript and Vitest, using wevir's toolchain |
 
-To try it end to end without a hosted relay:
+Local end-to-end testing:
 
 1. Run wevir's relay locally (`apps/relay`).
 2. In the desktop app, set the relay to `ws://127.0.0.1:<port>`.
-3. Make a pairing link, and replace its address with `http://localhost:5173/pair`.
+3. Create a pairing link and replace its address with `http://localhost:5173/pair`.
 
 ### Layout
 
 | Path | |
 |---|---|
-| `src/main.tsx` | Picks the page: pairing link, computer list, or the app for the current computer |
-| `src/platform.ts` | The browser's side of the renderer's platform interface, and the connection through the relay |
-| `src/pairing.ts`, `src/pair-page.tsx` | Reading pairing links and pairing |
+| `src/main.tsx` | Page selection: pairing link, computer list, or the app for the current computer |
+| `src/platform.ts` | Browser implementation of the renderer's platform interface; relay connection |
+| `src/pairing.ts`, `src/pair-page.tsx` | Pairing link parsing and pairing |
 | `src/store.ts`, `src/device-key.ts` | Paired computers and device keys in IndexedDB |
-| `src/computers-page.tsx`, `src/computer-slot.tsx` | The computer list, and the current computer in the sidebar |
-| `src/csp.ts` | The Content Security Policy and security headers (tests keep `_headers` and `vercel.json` in sync) |
-| `.github/workflows/web.yml` | Checks and builds every push. Deploys `main` to Cloudflare when `CLOUDFLARE_API_TOKEN` is set |
-| `.github/workflows/relay.yml` | Deploys the official relay (wevir's `apps/relay-worker`) to `relay.wevir.si` from the pinned commit when the pin changes on `main`, after its protocol tests. Needs `SOURCE_TAG_KEY` as well |
+| `src/computers-page.tsx`, `src/computer-slot.tsx` | Computer list; current computer in the sidebar |
+| `src/csp.ts` | Content Security Policy and security headers (tests keep `_headers` and `vercel.json` in sync) |
+| `.github/workflows/web.yml` | Checks and builds every push; deploys `main` to Cloudflare when `CLOUDFLARE_API_TOKEN` is set |
+| `.github/workflows/relay.yml` | Deploys the official relay (wevir's `apps/relay-worker`) to `relay.wevir.si` from the pinned commit when the pin changes on `main`, after protocol tests; also requires `SOURCE_TAG_KEY` |
 
-To move to a newer wevir, update the submodule (`git -C wevir checkout <commit>`), run `pnpm run setup`, check, and commit the new pin.
+Updating wevir: check out the new commit in the submodule (`git -C wevir checkout <commit>`), run `pnpm run setup` and the checks, then commit the new pin.
 
 ## License
 
