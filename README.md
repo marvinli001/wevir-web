@@ -1,5 +1,7 @@
 # Wevir Web
 
+English · [简体中文](README.zh-CN.md)
+
 The [Wevir](https://github.com/marvinli001/wevir) desktop interface as a static site, connected to a computer running Wevir through a relay. Sessions, projects, and agents remain on that computer; the browser displays them and sends messages and approvals.
 
 Hosted at **https://web.wevir.si**; self-hosting supported.
