@@ -1,6 +1,7 @@
 // What this browser remembers, in IndexedDB: the computers it is paired with, and the client identity for `host.hello`.
 // Each computer has its own device key. The private half is a non-extractable WebCrypto CryptoKey: IndexedDB stores
-// it as an opaque handle, and no script, this one included, can read its bytes back out.
+// it as an opaque handle, and no script, this one included, can read its bytes back out. Where IndexedDB loses such a
+// key (WebKit, see device-key.ts) it is stored as PKCS #8 bytes.
 
 export interface ComputerRecord {
   /** The computer's relay route ID (base64url); the record's key. */
@@ -15,7 +16,8 @@ export interface ComputerRecord {
   relayUrl: string;
   /** This browser's device key for that computer. */
   devicePublicKey: Uint8Array;
-  devicePrivateKey: CryptoKey;
+  /** The key, or its PKCS #8 bytes (`DeviceKey.privateKey`). */
+  devicePrivateKey: CryptoKey | Uint8Array;
   pairedAt: string;
   lastConnectedAt?: string;
   /** The computer removed this device (the connection closed with `DEVICE_REVOKED`); pairing again clears it. */
@@ -105,6 +107,18 @@ export function getCurrentComputerId(): Promise<string | undefined> {
 
 export async function setCurrentComputerId(routeId: string): Promise<void> {
   await run(META, 'readwrite', (store) => store.put(routeId, 'current'));
+}
+
+/** Whether `key` comes back from IndexedDB as a key. Writes it under a scratch entry and removes it again. */
+export async function keepsCryptoKey(key: CryptoKey): Promise<boolean> {
+  try {
+    await run(META, 'readwrite', (store) => store.put(key, 'probe'));
+    const read = await run<unknown>(META, 'readonly', (store) => store.get('probe'));
+    await run(META, 'readwrite', (store) => store.delete('probe'));
+    return read instanceof CryptoKey;
+  } catch {
+    return false;
+  }
 }
 
 function randomHex(bytes: number): string {

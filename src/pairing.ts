@@ -11,7 +11,13 @@ import {
   parsePairingUri,
 } from '@wevir/protocol';
 import { deviceStaticKey, generateDeviceKey } from './device-key';
-import { type ComputerRecord, loadIdentity, putComputer, setCurrentComputerId } from './store';
+import {
+  type ComputerRecord,
+  keepsCryptoKey,
+  loadIdentity,
+  putComputer,
+  setCurrentComputerId,
+} from './store';
 
 /** The platform this browser reports when pairing. Computers that offer web pairing links (protocol 0.117.0) know it. */
 export const DEVICE_PLATFORM: DevicePlatform = 'web';
@@ -57,7 +63,7 @@ export interface PairOptions {
 /** Pairs, waits for the computer's approval, stores the computer and makes it the current one. */
 export async function pairComputer(options: PairOptions): Promise<ComputerRecord> {
   const { payload } = options;
-  const key = await generateDeviceKey();
+  const key = await generateDeviceKey(keepsCryptoKey);
   const identity = await loadIdentity();
   const result = await pairRemoteHost({
     host: { hostPublicKey: payload.hostPublicKey, routeId: payload.routeId },
