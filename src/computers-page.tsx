@@ -1,9 +1,10 @@
-// `/computers`: the computers this browser is paired with. Open one (it becomes the current one and the app connects to
-// it), rename it here, or remove it (the device key is deleted; the computer still lists this device until it is
-// removed there too).
+// `/computers`: the computers this browser is paired with. Add one (scan or paste its pairing link), open one (it
+// becomes the current one and the app connects to it), rename it here, or remove it (the device key is deleted; the
+// computer still lists this device until it is removed there too).
 import { Button, currentLocale } from '@wevir-renderer';
-import { Monitor, Pencil, Trash2 } from 'lucide-react';
+import { Monitor, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { AddComputerDialog } from './add-computer-dialog';
 import { wt } from './i18n';
 import { pageUrl } from './paths';
 import { ErrorText, ShellFrame } from './shell-frame';
@@ -19,6 +20,7 @@ import {
 export function ComputersPage() {
   const [computers, setComputers] = useState<ComputerRecord[]>();
   const [error, setError] = useState<string>();
+  const [adding, setAdding] = useState(false);
   const reload = () =>
     listComputers().then(setComputers, (reason: unknown) => setError(String(reason)));
 
@@ -27,7 +29,15 @@ export function ComputersPage() {
   }, []);
 
   return (
-    <ShellFrame title={wt('computers.title')}>
+    <ShellFrame
+      title={wt('computers.title')}
+      action={
+        <Button size="sm" onClick={() => setAdding(true)} data-action="add-computer">
+          <Plus data-icon="inline-start" />
+          {wt('add.title')}
+        </Button>
+      }
+    >
       {error && <ErrorText>{error}</ErrorText>}
       {computers !== undefined && computers.length === 0 && (
         <div className="rounded-xl border border-border bg-card px-4 py-6 text-center">
@@ -42,9 +52,7 @@ export function ComputersPage() {
           ))}
         </ul>
       )}
-      {computers !== undefined && computers.length > 0 && (
-        <p className="mt-3 text-sm text-muted-foreground">{wt('computers.add')}</p>
-      )}
+      <AddComputerDialog open={adding} onOpenChange={setAdding} />
     </ShellFrame>
   );
 }

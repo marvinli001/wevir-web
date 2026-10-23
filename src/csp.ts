@@ -41,6 +41,6 @@ export const SECURITY_HEADERS: Readonly<Record<string, string>> = {
   'X-Frame-Options': 'DENY',
   'Cross-Origin-Opener-Policy': 'same-origin',
   'Cross-Origin-Resource-Policy': 'same-origin',
-  'Permissions-Policy': 'camera=(), geolocation=(), microphone=(self), payment=(), usb=()',
+  'Permissions-Policy': 'camera=(self), geolocation=(), microphone=(self), payment=(), usb=()',
   'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
 };

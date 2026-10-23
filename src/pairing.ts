@@ -29,6 +29,23 @@ export function parsePairingFragment(fragment: string): PairingLink {
   return { kind: 'ok', payload: { ...payload, relayUrl: payload.relayUrl } };
 }
 
+export type PairingText =
+  | { kind: 'ok'; fragment: string }
+  | { kind: 'invalid' }
+  | { kind: 'no_relay' };
+
+/**
+ * Reads a pasted or scanned pairing link: the computer's web link (`https://…/pair#…`, from any web address) or its
+ * `wevir://pair?…` link. Returns the parameters as a fragment for the pairing page.
+ */
+export function pairingLinkFragment(text: string): PairingText {
+  const value = text.trim();
+  const payload = parsePairingUri(value);
+  if (payload === null) return { kind: 'invalid' };
+  if (payload.relayUrl === undefined) return { kind: 'no_relay' };
+  return { kind: 'ok', fragment: value.slice(value.search(/[#?]/) + 1) };
+}
+
 export interface PairOptions {
   payload: PairingPayload & { relayUrl: string };
   deviceName: string;

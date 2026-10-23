@@ -8,8 +8,8 @@ Hosted at **https://web.wevir.si**; self-hosting supported.
 
 ## Usage
 
-1. On the computer: **Settings → Devices**, enable remote access with a relay, and add a device to get a pairing link and QR code.
-2. Open the link in the browser and choose **Pair**.
+1. On the computer: **Settings → Devices → Add web device** (with a relay) shows a pairing link and QR code.
+2. Open the link in the browser, or choose **Add computer** in the computer list to scan the QR code or paste the link; then choose **Pair**.
 3. Approve the request on the computer.
 
 Paired computers reconnect automatically. **Computers** in the sidebar lists every computer paired with this browser, with open, rename, and remove actions.
@@ -48,7 +48,7 @@ pnpm run build      # → dist/
 - **Vercel**: [`vercel.json`](vercel.json) defines the build command, SPA rewrite, and the same headers.
 - **Other hosts**: copy the CSP and other headers from `public/_headers` into the host configuration.
 
-Pairing links point to the official site. For a self-hosted copy, keep everything from `#` onward and replace the preceding part with your address, e.g. `https://wevir.example.com/pair#v=1&k=…`.
+Pairing links point to the official site. For a self-hosted copy, set its address on the computer (**Settings → Devices → Web devices**), use **Add computer** on the copy (it accepts links from any address), or keep everything from `#` onward and replace the preceding part with your address, e.g. `https://wevir.example.com/pair#v=1&k=…`.
 
 The relay is configured on the computer, not on the site: the official relay (`wss://web.wevir.si`, the same Worker as the site), or one built from wevir's `apps/relay` or `apps/relay-worker`. Self-hosted relays require `wss://`; the production CSP blocks `ws://`.
 
@@ -85,6 +85,7 @@ Local end-to-end testing:
 | `src/main.tsx` | Page selection: pairing link, computer list, or the app for the current computer |
 | `src/platform.ts` | Browser implementation of the renderer's platform interface; relay connection |
 | `src/pairing.ts`, `src/pair-page.tsx` | Pairing link parsing and pairing |
+| `src/add-computer-dialog.tsx`, `src/qr-scan.ts` | Add computer: QR scan (Barcode Detection API, ZXing WebAssembly fallback) or pasted link |
 | `src/store.ts`, `src/device-key.ts` | Paired computers and device keys in IndexedDB |
 | `src/computers-page.tsx`, `src/computer-slot.tsx` | Computer list; current computer in the sidebar |
 | `src/csp.ts` | Content Security Policy and security headers (tests keep `_headers` and `vercel.json` in sync) |

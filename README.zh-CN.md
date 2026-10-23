@@ -8,8 +8,8 @@
 
 ## 使用
 
-1. 在电脑上打开 **设置 → 设备**，启用经中继的远程访问并添加设备，获取配对链接与二维码。
-2. 在浏览器中打开链接，选择 **配对**。
+1. 在电脑上打开 **设置 → 设备 → 添加网页设备**（需启用中继），获取配对链接与二维码。
+2. 在浏览器中打开链接，或在电脑列表中选择 **添加电脑**，扫描二维码或粘贴链接；然后选择 **配对**。
 3. 在电脑上批准请求。
 
 已配对的电脑自动重连。侧栏 **电脑** 列出此浏览器配对过的所有电脑，支持打开、重命名与移除。
@@ -48,7 +48,7 @@ pnpm run build      # → dist/
 - **Vercel**：[`vercel.json`](vercel.json) 定义构建命令、SPA 重写与相同的响应头。
 - **其他平台**：将 `public/_headers` 中的内容安全策略及其他响应头写入平台配置。
 
-配对链接指向官方站点。使用自托管副本时，保留 `#` 及其后部分，将前面替换为自有地址，例如 `https://wevir.example.com/pair#v=1&k=…`。
+配对链接指向官方站点。使用自托管副本时，可在电脑上设置其地址（**设置 → 设备 → 网页设备**），或在副本中使用 **添加电脑**（接受任意地址的链接），或保留 `#` 及其后部分，将前面替换为自有地址，例如 `https://wevir.example.com/pair#v=1&k=…`。
 
 中继在电脑端配置，与站点无关：官方中继，或基于 wevir `apps/relay` 自建的中继。自建中继须使用 `wss://`；生产环境的内容安全策略拦截 `ws://`。
 
@@ -85,6 +85,7 @@ pnpm dev                                # http://localhost:5173
 | `src/main.tsx` | 页面选择：配对链接、电脑列表或当前电脑的应用 |
 | `src/platform.ts` | 渲染层平台接口的浏览器实现；中继连接 |
 | `src/pairing.ts`、`src/pair-page.tsx` | 配对链接解析与配对 |
+| `src/add-computer-dialog.tsx`、`src/qr-scan.ts` | 添加电脑：扫码（Barcode Detection API，回退 ZXing WebAssembly）或粘贴链接 |
 | `src/store.ts`、`src/device-key.ts` | IndexedDB 中的已配对电脑与设备密钥 |
 | `src/computers-page.tsx`、`src/computer-slot.tsx` | 电脑列表；侧栏中的当前电脑 |
 | `src/csp.ts` | 内容安全策略与安全响应头（测试保证 `_headers` 与 `vercel.json` 同步） |

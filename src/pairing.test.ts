@@ -1,7 +1,7 @@
 import { formatPairingUri, PAIRING_URI_PREFIX } from '@wevir/protocol';
 import { describe, expect, it } from 'vitest';
 import { defaultDeviceName } from './device-name';
-import { parsePairingFragment } from './pairing';
+import { pairingLinkFragment, parsePairingFragment } from './pairing';
 import { currentPage } from './paths';
 
 const KEY = 'A'.repeat(43);
@@ -42,6 +42,27 @@ describe('parsePairingFragment', () => {
     expect(parsePairingFragment(fragment('wss://r.example').replace('v=1', 'v=9'))).toEqual({
       kind: 'invalid',
     });
+  });
+});
+
+describe('pairingLinkFragment', () => {
+  it('takes the web link from any web address and the wevir:// link', () => {
+    const params = fragment('wss://relay.example.com');
+    for (const text of [
+      `https://web.wevir.si/pair#${params}`,
+      `  https://example.com/wevir/pair/#${params}\n`,
+      `${PAIRING_URI_PREFIX}${params}`,
+    ]) {
+      const link = pairingLinkFragment(text);
+      expect(link).toEqual({ kind: 'ok', fragment: params });
+      if (link.kind === 'ok') expect(parsePairingFragment(link.fragment).kind).toBe('ok');
+    }
+  });
+
+  it('needs a relay and a pairing link', () => {
+    expect(pairingLinkFragment(`${PAIRING_URI_PREFIX}${fragment()}`)).toEqual({ kind: 'no_relay' });
+    expect(pairingLinkFragment('https://web.wevir.si/computers')).toEqual({ kind: 'invalid' });
+    expect(pairingLinkFragment('hello')).toEqual({ kind: 'invalid' });
   });
 });
 
