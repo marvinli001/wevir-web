@@ -1,5 +1,8 @@
-# Builds the site from the wevir commit the submodule pins, and deploys it to Cloudflare from main when the
-# CLOUDFLARE_API_TOKEN secret is set. Without the secret the deploy job is skipped and only the checks run.
+# Checks and builds the site and the relay from the wevir commit the submodule pins, and deploys both to Cloudflare as
+# one Worker (web.wevir.si, see wrangler.jsonc) from main, on pushes and manual runs. Pull requests only run the checks.
+#
+# Secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, and SOURCE_TAG_KEY (the relay's HMAC key for source tags, any long
+# random string, uploaded with each deploy through --secrets-file). Without the token nothing is deployed.
 name: Web
 
 on:
@@ -13,12 +16,13 @@ permissions:
 
 concurrency:
   group: web-${{ github.ref }}
-  cancel-in-progress: true
+  # Deploys from main queue instead of cancelling each other.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  build:
+  web:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
         with:
@@ -50,50 +54,48 @@ jobs:
       - name: Test
         run: pnpm run test
 
-      - name: Build
+      - name: Build the site
         run: pnpm run build
 
-      - uses: actions/upload-artifact@v7
-        with:
-          name: site
-          path: dist
-          retention-days: 7
+      # The relay's bundle needs the protocol package's dist; its protocol tests also start the Node relay.
+      - name: Build the relay
+        working-directory: wevir
+        run: pnpm --filter "@wevir/relay-worker..." --filter "@wevir/relay..." build
 
-  deploy:
-    needs: build
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment: production
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-    steps:
-      - name: Token present
-        id: token
-        run: echo "present=${{ env.CLOUDFLARE_API_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/checkout@v7
-        if: steps.token.outputs.present == 'true'
-        with:
-          persist-credentials: false
-
-      - uses: actions/download-artifact@v8
-        if: steps.token.outputs.present == 'true'
-        with:
-          name: site
-          path: dist
-
-      - uses: actions/setup-node@v7
-        if: steps.token.outputs.present == 'true'
-        with:
-          node-version: 24
+      - name: Check the relay
+        working-directory: wevir
+        run: |
+          pnpm --filter @wevir/relay-worker typecheck
+          pnpm vitest run --project relay-worker --project relay
 
       - name: Deploy
-        if: steps.token.outputs.present == 'true'
-        run: npx --yes wrangler@4 deploy
+        id: deploy
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SOURCE_TAG_KEY: ${{ secrets.SOURCE_TAG_KEY }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "CLOUDFLARE_API_TOKEN is not set; nothing deployed."
+            exit 0
+          fi
+          if [ -z "$SOURCE_TAG_KEY" ]; then
+            echo "::error::SOURCE_TAG_KEY is not set"
+            exit 1
+          fi
+          secrets="$RUNNER_TEMP/relay-secrets.json"
+          umask 077
+          node -e 'process.stdout.write(JSON.stringify({ SOURCE_TAG_KEY: process.env.SOURCE_TAG_KEY }))' > "$secrets"
+          ./.wevir/apps/relay-worker/node_modules/.bin/wrangler deploy --secrets-file "$secrets"
+          rm -f "$secrets"
+          echo "deployed=true" >> "$GITHUB_OUTPUT"
 
-      - name: Skipped
-        if: steps.token.outputs.present != 'true'
-        run: echo "CLOUDFLARE_API_TOKEN is not set; nothing deployed."
+      - name: Health check
+        if: steps.deploy.outputs.deployed == 'true'
+        run: |
+          for i in $(seq 1 10); do
+            if curl -fsS https://web.wevir.si/healthz && curl -fsS -o /dev/null https://web.wevir.si/; then exit 0; fi
+            sleep 6
+          done
+          exit 1

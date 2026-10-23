@@ -1,13 +1,38 @@
-// Cloudflare Workers static assets: no Worker code, only the built files in dist/. Unknown paths (/pair, /computers)
-// get index.html; headers come from dist/_headers (public/_headers). Deployed by .github/workflows/web.yml.
+// One Cloudflare Worker for web.wevir.si: the site and the official Wevir relay.
+// - The site is static assets from dist/. Unknown paths (/pair, /computers) get index.html; headers come from
+//   dist/_headers (public/_headers). Asset requests never run Worker code.
+// - The relay is wevir's apps/relay-worker, built from the commit the submodule pins (`.wevir` is the link `pnpm run setup`
+//   makes). Only its paths run the Worker: /v1/* (WebSocket upgrades) and /healthz. Desktops reach it at wss://web.wevir.si.
+// The Durable Objects, rate limit and vars below mirror apps/relay-worker/wrangler.jsonc. Deployed by .github/workflows/web.yml.
 {
   "name": "wevir-web",
+  "main": ".wevir/apps/relay-worker/src/index.ts",
   "compatibility_date": "2026-10-01",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/v1/*", "/healthz"]
   },
   "routes": [{ "pattern": "web.wevir.si", "custom_domain": true }],
   "workers_dev": false,
-  "preview_urls": false
+  "preview_urls": false,
+  "send_metrics": false,
+  "durable_objects": {
+    "bindings": [
+      { "name": "ROUTES", "class_name": "Route" },
+      { "name": "CONTROLS", "class_name": "Control" },
+      { "name": "PIPES", "class_name": "Pipe" }
+    ]
+  },
+  // SQLite-backed Durable Objects: the only kind on the Workers Free plan.
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Route", "Control", "Pipe"] }],
+  // 60 WebSocket upgrades per source address per minute, as in apps/relay.
+  "ratelimits": [
+    { "name": "CONNECT_LIMITER", "namespace_id": "47830", "simple": { "limit": 60, "period": 60 } }
+  ],
+  "vars": {
+    "WEVIR_RELAY_LOG_LEVEL": "info",
+    "WEVIR_RELAY_MAX_CONNECTIONS_PER_ROUTE": "32"
+  },
+  "observability": { "enabled": false }
 }

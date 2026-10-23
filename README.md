@@ -44,13 +44,13 @@ pnpm run setup
 pnpm run build      # → dist/
 ```
 
-- **Cloudflare**: [`wrangler.jsonc`](wrangler.jsonc) deploys `dist/` as Workers static assets. Set `name` and the `routes` domain, then run `npx wrangler deploy`. Headers come from `_headers` in `dist/`.
+- **Cloudflare**: [`wrangler.jsonc`](wrangler.jsonc) deploys one Worker that serves `dist/` as static assets and runs the relay (wevir's `apps/relay-worker`, from the pinned commit) on `/v1/*` and `/healthz`, so one domain is both the site and a relay. Set `name` and the `routes` domain, build the relay (`pnpm --filter "@wevir/relay-worker..." build` in `wevir/`), set the `SOURCE_TAG_KEY` secret, then run `.wevir/apps/relay-worker/node_modules/.bin/wrangler deploy`. Headers come from `_headers` in `dist/`.
 - **Vercel**: [`vercel.json`](vercel.json) defines the build command, SPA rewrite, and the same headers.
 - **Other hosts**: copy the CSP and other headers from `public/_headers` into the host configuration.
 
 Pairing links point to the official site. For a self-hosted copy, keep everything from `#` onward and replace the preceding part with your address, e.g. `https://wevir.example.com/pair#v=1&k=…`.
 
-The relay is configured on the computer, not on the site: the official relay, or one built from wevir's `apps/relay`. Self-hosted relays require `wss://`; the production CSP blocks `ws://`.
+The relay is configured on the computer, not on the site: the official relay (`wss://web.wevir.si`, the same Worker as the site), or one built from wevir's `apps/relay` or `apps/relay-worker`. Self-hosted relays require `wss://`; the production CSP blocks `ws://`.
 
 ## Development
 
@@ -88,8 +88,7 @@ Local end-to-end testing:
 | `src/store.ts`, `src/device-key.ts` | Paired computers and device keys in IndexedDB |
 | `src/computers-page.tsx`, `src/computer-slot.tsx` | Computer list; current computer in the sidebar |
 | `src/csp.ts` | Content Security Policy and security headers (tests keep `_headers` and `vercel.json` in sync) |
-| `.github/workflows/web.yml` | Checks and builds every push; deploys `main` to Cloudflare when `CLOUDFLARE_API_TOKEN` is set |
-| `.github/workflows/relay.yml` | Deploys the official relay (wevir's `apps/relay-worker`) to `relay.wevir.si` from the pinned commit when the pin changes on `main`, after protocol tests; also requires `SOURCE_TAG_KEY` |
+| `.github/workflows/web.yml` | Checks and builds the site and the relay on every push; deploys `main` to Cloudflare as one Worker when `CLOUDFLARE_API_TOKEN` and `SOURCE_TAG_KEY` are set |
 
 Updating wevir: check out the new commit in the submodule (`git -C wevir checkout <commit>`), run `pnpm run setup` and the checks, then commit the new pin.
 
