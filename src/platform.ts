@@ -1,5 +1,5 @@
 // The browser's implementation of the renderer's platform interface. What a browser can do itself: clipboard, links in a
-// new tab, notifications, the app badge, theme colour, downloads. Everything about the computer's own files, windows,
+// new tab, notifications, the app badge, theme colour, downloads (text and screenshots). Everything about the computer's own files, windows,
 // built-in browser, computer use and updates is off; the renderer hides those features.
 
 import {
@@ -60,8 +60,8 @@ const notify: PlatformApi['notify'] = async ({ tag, title, body, sound }) => {
   return true;
 };
 
-function saveTextAs(name: string, text: string): Promise<'saved' | 'cancelled'> {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+function download(name: string, blob: Blob): Promise<'saved' | 'cancelled'> {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = name;
@@ -71,6 +71,16 @@ function saveTextAs(name: string, text: string): Promise<'saved' | 'cancelled'> 
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
   return Promise.resolve('saved');
+}
+
+function saveTextAs(name: string, text: string): Promise<'saved' | 'cancelled'> {
+  return download(name, new Blob([text], { type: 'text/plain;charset=utf-8' }));
+}
+
+/** A PNG the computer sent as base64 (the simulator pane's screenshot). */
+function saveImageAs(name: string, data: string): Promise<'saved' | 'cancelled'> {
+  const bytes = Uint8Array.from(atob(data), (char) => char.charCodeAt(0));
+  return download(name, new Blob([bytes], { type: 'image/png' }));
 }
 
 function setThemeColor(color: string): void {
@@ -114,6 +124,7 @@ const api = unsupportedPlatformApi({
     setThemeColor(dark ? background.dark : background.light);
   },
   saveTextAs,
+  saveImageAs,
 });
 
 /** The connection to one paired computer: through its relay, Noise IK with this browser's device key. */
