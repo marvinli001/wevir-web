@@ -18,6 +18,7 @@ Paired computers reconnect automatically. **Computers** in the sidebar lists eve
 
 - Opening the computer's files in local apps, Finder, or an editor; file previews
 - Project creation (folder selection on the computer)
+- Attaching any file from the computer to a message (images can still be added from the browser)
 - Built-in browser, computer use, sleep prevention, app updates, and the storage page
 
 Device permissions set on the computer further limit access. Defaults: read and work in sessions, read projects. Computer settings, model providers, approval rules, and the terminal require permissions granted under **Settings → Devices**. Features without permission are hidden or read-only.
