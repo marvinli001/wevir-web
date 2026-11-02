@@ -3,3 +3,13 @@
 @import "../.wevir/apps/desktop/src/renderer/src/index.css";
 @source "../.wevir/apps/desktop/src/renderer/src";
 @source "./";
+
+/* Touch browsers zoom focused fields below 16px; override the renderer's layered font utilities. */
+@media (any-pointer: coarse) {
+  input,
+  textarea,
+  select,
+  [contenteditable]:not([contenteditable="false"]) {
+    font-size: max(16px, var(--text-base));
+  }
+}
