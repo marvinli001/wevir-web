@@ -16,7 +16,7 @@
 
 ### 仅限桌面端的功能
 
-- 用本机应用、访达或编辑器打开电脑上的文件；文件预览
+- 用本机应用、访达或编辑器打开电脑上的文件；依赖本机流式地址的预览
 - 创建项目（在电脑上选择文件夹）
 - 在会话或助理的消息中附加电脑上的文件和文件夹（图片仍可从浏览器添加）
 - 内置浏览器、电脑操作、防休眠、应用更新与存储页
@@ -55,9 +55,11 @@ pnpm run build      # → dist/
 
 ## 开发
 
-要求：Node 24.15+、pnpm 12。
+要求：Node 24.22.1+、pnpm 12.6.0，与共用的 Desktop checkout 一致。
 
-本仓库没有独立的 npm 依赖。渲染层来自 wevir，以 git 子模块（`wevir/`）引入；站点基于子模块锁定的提交构建。`pnpm run setup` 按 wevir 的锁文件安装依赖，并将 `node_modules` 链接至桌面端，React、Vite、Tailwind 等依赖版本与桌面端一致。不要在本仓库运行 `pnpm install`。
+渲染层来自 wevir，以 git 子模块（`wevir/`）引入；站点基于子模块锁定的提交构建。`pnpm run setup` 分别按两个仓库的锁文件安装，再将 Desktop 的依赖链接到浏览器外壳，确保 React、Vite、Tailwind 等共用依赖与 Desktop 一致。本仓库只声明浏览器扫码专用依赖。使用 `pnpm run setup`，不要只运行 `pnpm install`。
+
+应用界面、样式、翻译与交互逻辑以 Desktop 为准，Web 直接引入其 `embed.ts` 和 `index.css`；共用界面的更改放在 Desktop，不在浏览器端复制。本仓库负责配对、电脑列表与浏览器平台接口。可用功能仍由设备权限和浏览器能力决定。
 
 ```sh
 git submodule update --init
@@ -90,10 +92,11 @@ pnpm dev                                # http://localhost:5173
 | `src/store.ts`、`src/device-key.ts` | IndexedDB 中的已配对电脑与设备密钥 |
 | `src/computers-page.tsx`、`src/computer-slot.tsx` | 电脑列表；侧栏中的当前电脑 |
 | `src/csp.ts` | 内容安全策略与安全响应头（测试保证 `_headers` 与 `vercel.json` 同步） |
-| `.github/workflows/web.yml` | 每次推送执行检查与构建；设置 `CLOUDFLARE_API_TOKEN` 后将 `main` 部署至 Cloudflare |
-| `.github/workflows/relay.yml` | `main` 上的锁定提交变更且协议测试通过后，将官方中继（wevir 的 `apps/relay-worker`）从锁定提交部署至 `relay.wevir.si`；另需 `SOURCE_TAG_KEY` |
+| `.github/workflows/web.yml` | 检查并构建共用渲染层、站点与中继；将 `main` 部署至 Cloudflare，每小时同步 Desktop 更新 |
 
-升级 wevir：在子模块中检出新提交（`git -C wevir checkout <commit>`），运行 `pnpm run setup` 与各项检查，然后提交新的锁定版本。
+`main` 上的 Web 工作流每小时检查 Desktop 的 `master`。发现更新后，检查并构建该确切提交，使用现有 Cloudflare secrets 部署，再由 `GITHUB_TOKEN` 记录子模块版本。检查失败时不推进版本或部署；没有上游更新时跳过构建与部署。无需新增 secret，记录版本的作业需要仓库内容写权限。
+
+立即更新：手动运行 **Web** 工作流，保持 **Sync Desktop** 开启（默认）；关闭则重建当前锁定版本。推送与 PR 始终检查已提交的版本。本地仍可在 `wevir/` 中检出指定提交，运行 `pnpm run setup` 与各项检查，再提交新的锁定版本。
 
 ## 许可证
 

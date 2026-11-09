@@ -23,7 +23,7 @@ export function ComputerSlot({ computer }: { computer: ComputerRecord }) {
       title={wt('computers.title')}
       data-testid="web-computer"
       data-state={view.status}
-      className="mb-px flex h-8 w-full min-w-0 items-center gap-2 rounded-lg px-2 text-base outline-none transition-[color,background-color,box-shadow] duration-150 ease-smooth hover:bg-sidebar-accent/70 focus-visible:focus-ring"
+      className="mb-px flex h-9 w-full min-w-0 items-center gap-2.5 rounded-lg px-2 text-base outline-none transition-[color,background-color,box-shadow] duration-150 ease-smooth hover:bg-sidebar-accent/70 focus-visible:focus-ring"
     >
       <Monitor className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       <span className="min-w-0 flex-1 truncate">

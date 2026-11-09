@@ -1,16 +1,19 @@
-// Runs a tool from the wevir checkout's root install (`.wevir`): TypeScript, Biome and Vitest at the versions wevir uses.
-// Vite comes from the desktop app's dependencies through the `node_modules` link and runs as `vite` directly.
+// Runs shared tools from the Desktop checkout so the browser uses the same toolchain.
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { linkedWevirDir, WEB_ROOT } from './wevir-dir.mjs';
 
 const [tool, ...args] = process.argv.slice(2);
-if (!['tsc', 'biome', 'vitest'].includes(tool)) {
-  console.error(`unknown tool ${tool}; one of tsc, biome, vitest`);
+if (!['tsc', 'biome', 'vitest', 'vite'].includes(tool)) {
+  console.error(`unknown tool ${tool}; one of tsc, biome, vitest, vite`);
   process.exit(2);
 }
-const bin = join(linkedWevirDir(), 'node_modules/.bin', tool);
+const bin = join(
+  linkedWevirDir(),
+  tool === 'vite' ? 'apps/desktop/node_modules/.bin' : 'node_modules/.bin',
+  tool,
+);
 if (!existsSync(bin)) {
   console.error(`${bin} is missing: run \`pnpm run setup\``);
   process.exit(1);

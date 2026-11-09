@@ -16,7 +16,7 @@ Paired computers reconnect automatically. **Computers** in the sidebar lists eve
 
 ### Desktop-only features
 
-- Opening the computer's files in local apps, Finder, or an editor; file previews
+- Opening the computer's files in local apps, Finder, or an editor; previews that need a local streaming URL
 - Project creation (folder selection on the computer)
 - Attaching files and folders from the computer to a session or assistant message (images can still be added from the browser)
 - Built-in browser, computer use, sleep prevention, app updates, and the storage page
@@ -55,9 +55,11 @@ The relay is configured on the computer, not on the site: the official relay (`w
 
 ## Development
 
-Requirements: Node 24.15+ and pnpm 12.
+Requirements: Node 24.22.1+ and pnpm 12.6.0 (the versions required by the shared Desktop checkout).
 
-No npm dependencies of its own. The renderer comes from wevir, included as a git submodule (`wevir/`); the site builds against the pinned commit. `pnpm run setup` installs wevir's dependencies from wevir's lockfile and links `node_modules` to the desktop app's, so React, Vite, Tailwind, and other dependencies match the desktop app's versions. Do not run `pnpm install` in this repository.
+The renderer comes from wevir, included as a git submodule (`wevir/`); the site builds against the pinned commit. `pnpm run setup` installs both repositories from their lockfiles, then links Desktop's dependencies into the browser shell, so React, Vite, Tailwind, and other shared dependencies match Desktop's versions. Only browser-specific QR scanning dependencies are declared here. Use `pnpm run setup` rather than `pnpm install` alone.
+
+Desktop is the source of truth for the app UI, styles, translations, and interaction logic. Web imports its `embed.ts` and `index.css` directly; changes belong in Desktop rather than browser-specific copies. This repository supplies pairing, the computer list, and browser platform APIs. Device permissions and browser capabilities still determine which features are available.
 
 ```sh
 git submodule update --init
@@ -90,9 +92,11 @@ Local end-to-end testing:
 | `src/store.ts`, `src/device-key.ts` | Paired computers and device keys in IndexedDB |
 | `src/computers-page.tsx`, `src/computer-slot.tsx` | Computer list; current computer in the sidebar |
 | `src/csp.ts` | Content Security Policy and security headers (tests keep `_headers` and `vercel.json` in sync) |
-| `.github/workflows/web.yml` | Checks and builds the site and the relay on every push; deploys `main` to Cloudflare as one Worker when `CLOUDFLARE_API_TOKEN` and `SOURCE_TAG_KEY` are set |
+| `.github/workflows/web.yml` | Checks and builds the shared renderer, site, and relay; deploys `main` to Cloudflare and synchronizes Desktop updates hourly |
 
-Updating wevir: check out the new commit in the submodule (`git -C wevir checkout <commit>`), run `pnpm run setup` and the checks, then commit the new pin.
+On `main`, the Web workflow checks Desktop's `master` every hour. When it changes, the workflow checks and builds that exact commit, deploys with the existing Cloudflare secrets, then records the new submodule pin with `GITHUB_TOKEN`. A failed check leaves the pin and deployed site unchanged. No new secret is required; the pin-writing job needs repository contents write access. With no upstream change, scheduled runs skip the build and deployment.
+
+For an immediate update, run the **Web** workflow with **Sync Desktop** enabled (the default). Turn it off to rebuild the current pin. Pushes and pull requests always test the committed pin. Local updates remain available: check out a commit in `wevir/`, run `pnpm run setup` and the checks, then commit the new pin.
 
 ## License
 

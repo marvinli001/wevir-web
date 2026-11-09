@@ -5,5 +5,3 @@ dist/
 .vercel/
 *.log
 .DS_Store
-# pnpm writes one for the packageManager pin on any `pnpm run`; the real lockfile is wevir's.
-pnpm-lock.yaml

@@ -1,5 +1,6 @@
 # Checks and builds the site and the relay from the wevir commit the submodule pins, and deploys both to Cloudflare as
-# one Worker (web.wevir.si, see wrangler.jsonc) from main, on pushes and manual runs. Pull requests only run the checks.
+# one Worker (web.wevir.si, see wrangler.jsonc) from main. Scheduled runs also advance the pin after successful checks
+# and deployment. Pull requests only run the checks against their committed pin.
 #
 # Secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, and SOURCE_TAG_KEY (the relay's HMAC key for source tags, any long
 # random string, uploaded with each deploy through --secrets-file). Without the token nothing is deployed.
@@ -10,6 +11,13 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      sync_desktop:
+        description: Sync Desktop
+        type: boolean
+        default: true
+  schedule:
+    - cron: '17 * * * *'
 
 permissions:
   contents: read
@@ -20,7 +28,35 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      wevir_sha: ${{ steps.source.outputs.wevir_sha }}
+      changed: ${{ steps.source.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Resolve Desktop commit
+        id: source
+        env:
+          SYNC_DESKTOP: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.sync_desktop)) }}
+        run: |
+          pinned=$(git rev-parse HEAD:wevir)
+          wevir_sha="$pinned"
+          changed=false
+          if [ "$SYNC_DESKTOP" = true ]; then
+            wevir_sha=$(git ls-remote --exit-code https://github.com/marvinli001/wevir.git refs/heads/master | cut -f1)
+            if [ "$wevir_sha" != "$pinned" ]; then changed=true; fi
+          fi
+          echo "wevir_sha=$wevir_sha" >> "$GITHUB_OUTPUT"
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+
   web:
+    needs: source
+    if: github.event_name != 'schedule' || needs.source.outputs.changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -28,6 +64,13 @@ jobs:
         with:
           submodules: true
           persist-credentials: false
+
+      - name: Use resolved Desktop commit
+        env:
+          WEVIR_SHA: ${{ needs.source.outputs.wevir_sha }}
+        run: |
+          git -C wevir fetch --depth=1 origin "$WEVIR_SHA"
+          git -C wevir checkout --detach FETCH_HEAD
 
       # The version comes from wevir's packageManager; the dependencies are wevir's, under its lockfile.
       - uses: pnpm/action-setup@v6
@@ -38,7 +81,9 @@ jobs:
         with:
           node-version-file: wevir/.node-version
           cache: pnpm
-          cache-dependency-path: wevir/pnpm-lock.yaml
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            wevir/pnpm-lock.yaml
 
       - name: Install
         run: pnpm run setup
@@ -53,6 +98,10 @@ jobs:
 
       - name: Test
         run: pnpm run test
+
+      - name: Test shared Desktop renderer
+        working-directory: wevir
+        run: pnpm vitest run --project desktop apps/desktop/src/renderer
 
       - name: Build the site
         run: pnpm run build
@@ -94,8 +143,31 @@ jobs:
       - name: Health check
         if: steps.deploy.outputs.deployed == 'true'
         run: |
-          for i in $(seq 1 10); do
+          for _ in $(seq 1 10); do
             if curl -fsS https://web.wevir.si/healthz && curl -fsS -o /dev/null https://web.wevir.si/; then exit 0; fi
             sleep 6
           done
           exit 1
+
+  record-sync:
+    needs: [source, web]
+    if: github.ref == 'refs/heads/main' && needs.source.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      # Only this job can write. The build above runs with read-only repository access.
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Record verified Desktop commit
+        env:
+          WEVIR_SHA: ${{ needs.source.outputs.wevir_sha }}
+        run: |
+          git -C wevir fetch --depth=1 origin "$WEVIR_SHA"
+          git -C wevir checkout --detach FETCH_HEAD
+          git add wevir
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "Sync Desktop renderer to ${WEVIR_SHA:0:8}"
+          git push origin HEAD:main

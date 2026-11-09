@@ -1,13 +1,18 @@
-// Points `.wevir` at the wevir checkout, installs its dependencies with wevir's own lockfile, and links `node_modules`
-// to the desktop app's. wevir-web declares no npm dependencies of its own: React, Vite, Tailwind and the rest resolve to
-// exactly the versions the desktop renderer ships with, through plain Node resolution, for Vite and TypeScript alike.
-// Do not run `pnpm install` in wevir-web itself; run this instead.
+// Installs the browser-only dependencies, then links the shared dependencies from Desktop's locked install.
 //
 //   pnpm run setup                         # the pinned submodule (git submodule update --init first)
 //   WEVIR_DIR=../wevir pnpm run setup      # another checkout
 import { spawnSync } from 'node:child_process';
-import { existsSync, lstatSync, readdirSync, readlinkSync, rmSync, symlinkSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readlinkSync,
+  rmSync,
+  symlinkSync,
+} from 'node:fs';
+import { dirname, join, relative } from 'node:path';
 import { chosenWevirDir, LINK, WEB_ROOT } from './wevir-dir.mjs';
 
 const target = chosenWevirDir();
@@ -17,25 +22,13 @@ if (!existsSync(join(target, 'apps/desktop/package.json'))) {
   process.exit(1);
 }
 
-/**
- * pnpm 12 checks the install before every `pnpm run`, which in a fresh clone leaves a `node_modules` holding only its own
- * dotfiles (`.modules.yaml`, `.pnpm-workspace-state-v1.json`). That one is safe to replace; anything with packages is not.
- */
-function onlyPnpmState(path) {
-  return readdirSync(path).every((name) => name.startsWith('.'));
-}
-
 /** Replaces `path` with a symlink to `to` (relative). Refuses to touch a real directory with content of its own. */
 function link(path, to) {
-  const wanted = relative(WEB_ROOT, to) || '.';
+  const wanted = relative(dirname(path), to) || '.';
   let stat;
   try {
     stat = lstatSync(path);
   } catch {
-    stat = undefined;
-  }
-  if (stat?.isDirectory() && onlyPnpmState(path)) {
-    rmSync(path, { recursive: true, force: true });
     stat = undefined;
   }
   if (stat !== undefined && !stat.isSymbolicLink()) {
@@ -43,6 +36,7 @@ function link(path, to) {
     process.exit(1);
   }
   if (stat === undefined || readlinkSync(path) !== wanted) {
+    mkdirSync(dirname(path), { recursive: true });
     rmSync(path, { force: true });
     symlinkSync(wanted, path, 'dir');
   }
@@ -57,4 +51,23 @@ const install = spawnSync('pnpm', ['install', ...(process.env.CI ? ['--frozen-lo
 });
 if (install.status !== 0) process.exit(install.status ?? 1);
 
-link(join(WEB_ROOT, 'node_modules'), join(target, 'apps/desktop/node_modules'));
+// Older setups linked the entire directory; remove only the link before installing Web's own packages.
+const modules = join(WEB_ROOT, 'node_modules');
+if (lstatSync(modules, { throwIfNoEntry: false })?.isSymbolicLink()) rmSync(modules);
+const browserInstall = spawnSync(
+  'pnpm',
+  ['install', ...(process.env.CI ? ['--frozen-lockfile'] : [])],
+  {
+    cwd: WEB_ROOT,
+    stdio: 'inherit',
+  },
+);
+if (browserInstall.status !== 0) process.exit(browserInstall.status ?? 1);
+
+const desktop = JSON.parse(readFileSync(join(target, 'apps/desktop/package.json'), 'utf8'));
+const browser = JSON.parse(readFileSync(join(WEB_ROOT, 'package.json'), 'utf8'));
+const browserDependencies = { ...browser.dependencies, ...browser.devDependencies };
+for (const name of Object.keys({ ...desktop.dependencies, ...desktop.devDependencies })) {
+  if (Object.hasOwn(browserDependencies, name)) continue;
+  link(join(modules, name), join(target, 'apps/desktop/node_modules', name));
+}
