@@ -15,6 +15,8 @@ import {
   type PlatformSlots,
   unsupportedPlatformApi,
 } from '@wevir-renderer';
+import { getShortcut, matchesShortcut } from '@/lib/shortcuts';
+import { resolvedTheme, subscribeTheme } from '@/theme/theme';
 import { deviceStaticKey } from './device-key';
 import { pageUrl } from './paths';
 import { refusedByComputer } from './removal';
@@ -83,14 +85,18 @@ function saveImageAs(name: string, data: string): Promise<'saved' | 'cancelled'>
   return download(name, new Blob([bytes], { type: 'image/png' }));
 }
 
-function setThemeColor(color: string): void {
+type WindowBackground = Parameters<PlatformApi['setWindowAppearance']>[0]['background'];
+let windowBackground: WindowBackground | undefined;
+
+function syncThemeColor(): void {
+  if (!windowBackground) return;
   let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
   if (meta === null) {
     meta = document.createElement('meta');
     meta.name = 'theme-color';
     document.head.append(meta);
   }
-  meta.content = color;
+  meta.content = windowBackground[resolvedTheme()];
 }
 
 const api = unsupportedPlatformApi({
@@ -120,8 +126,19 @@ const api = unsupportedPlatformApi({
     );
   },
   setWindowAppearance: async ({ background }) => {
-    const dark = document.documentElement.dataset.theme === 'dark';
-    setThemeColor(dark ? background.dark : background.light);
+    if (!windowBackground) subscribeTheme(syncThemeColor);
+    windowBackground = background;
+    syncThemeColor();
+  },
+  onRestoreDefaultTheme: (restore) => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.isComposing) return;
+      if (!matchesShortcut(event, getShortcut('restoreDefaultTheme'))) return;
+      event.preventDefault();
+      if (!event.repeat) restore();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   },
   saveTextAs,
   saveImageAs,

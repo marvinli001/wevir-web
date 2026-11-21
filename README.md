@@ -2,23 +2,25 @@
 
 English · [简体中文](README.zh-CN.md)
 
-The [Wevir](https://github.com/marvinli001/wevir) desktop interface as a static site, connected to a computer running Wevir through a relay. Sessions, projects, and agents remain on that computer; the browser displays them and sends messages and approvals.
+The [Wevir](https://github.com/marvinli001/wevir) desktop interface as a static site, connected to a computer running Wevir through a relay. The computer runs the agents and stores the projects and sessions. The browser caches drafts and conversations locally for offline access.
 
 Hosted at **https://web.wevir.si**; self-hosting supported.
 
 ## Usage
 
-1. On the computer: **Settings → Devices → Add web device** (with a relay) shows a pairing link and QR code.
+1. On the computer, open **Settings → Devices**, enable **Remote access**, then select **Pair a browser**. Choose a relay if prompted to get the pairing link and QR code.
 2. Open the link in the browser, or choose **Add computer** in the computer list to scan the QR code or paste the link; then choose **Pair**.
 3. Approve the request on the computer.
 
 Paired computers reconnect automatically. **Computers** in the sidebar lists every computer paired with this browser, with open, rename, and remove actions.
 
+On a paired computer with file attachment support, session and assistant messages accept files from the browser, including HEIC photos for image-capable models. With project write access, you can also create a project or clone a repository inside a registered project folder.
+
 ### Desktop-only features
 
 - Opening the computer's files in local apps, Finder, or an editor; previews that need a local streaming URL
-- Project creation (folder selection on the computer)
-- Attaching files and folders from the computer to a session or assistant message (images can still be added from the browser)
+- Adding an existing folder from the computer as a project
+- Selecting file and folder paths on the paired computer in the composer
 - Built-in browser, computer use, sleep prevention, app updates, and the storage page
 
 Device permissions set on the computer further limit access. Defaults: read and work in sessions, read projects. Computer settings, model providers, approval rules, and the terminal require permissions granted under **Settings → Devices**. Features without permission are hidden or read-only.

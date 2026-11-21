@@ -15,23 +15,27 @@ const RENDERER = join(WEVIR, 'apps/desktop/src/renderer');
 const RENDERER_SRC = join(RENDERER, 'src');
 
 /**
- * The renderer's first-frame script (public/theme-init.js sets data-theme before styles load): served in dev and
- * emitted in the build, so wevir-web's own public/ can hold the hosting files.
+ * Serve the renderer's first-frame script and the bundled HEIC decoder's notices alongside Web's public files.
  */
 function rendererPublic(): Plugin {
-  const files = ['theme-init.js'];
+  const files = new Map([
+    ['theme-init.js', 'text/javascript'],
+    ['legal/heic-to.txt', 'text/plain; charset=utf-8'],
+  ]);
   return {
     name: 'wevir-renderer-public',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const name = req.url?.split('?')[0]?.slice(1);
-        if (name === undefined || !files.includes(name)) return next();
-        res.setHeader('Content-Type', name.endsWith('.js') ? 'text/javascript' : 'text/css');
+        if (!name) return next();
+        const type = files.get(name);
+        if (!type) return next();
+        res.setHeader('Content-Type', type);
         res.end(readFileSync(join(RENDERER, 'public', name)));
       });
     },
     generateBundle() {
-      for (const name of files) {
+      for (const name of files.keys()) {
         this.emitFile({
           type: 'asset',
           fileName: name,

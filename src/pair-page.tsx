@@ -1,14 +1,17 @@
 // `/pair#…`: the page a pairing link opens. Shows which computer, takes this device's name, pairs through the relay and
 // waits for the computer's user to allow it, then opens the app.
+
 import { DEVICE_NAME_MAX_LENGTH } from '@wevir/protocol';
 import { Button, describeError } from '@wevir-renderer';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ErrorNote } from '@/components/error-note';
+import { Input } from '@/components/ui/input';
 import { x25519Supported } from './device-key';
 import { defaultDeviceName } from './device-name';
 import { wt } from './i18n';
 import { pairComputer, parsePairingFragment } from './pairing';
 import { pageUrl } from './paths';
-import { ErrorText, ShellFrame } from './shell-frame';
+import { ShellFrame } from './shell-frame';
 
 type Step =
   | { kind: 'idle' }
@@ -31,7 +34,9 @@ export function PairPage({ fragment }: { fragment: string }) {
   if (link.kind !== 'ok') {
     return (
       <ShellFrame title={wt('pair.invalid')}>
-        {link.kind === 'no_relay' && <ErrorText>{wt('pair.noRelay')}</ErrorText>}
+        {link.kind === 'no_relay' && (
+          <ErrorNote className="text-sm">{wt('pair.noRelay')}</ErrorNote>
+        )}
         <a
           className="mt-4 inline-block text-sm text-primary underline-offset-4 hover:underline"
           href={pageUrl('computers')}
@@ -72,15 +77,15 @@ export function PairPage({ fragment }: { fragment: string }) {
           if (!busy && trimmed !== '' && supported) void pair();
         }}
       >
-        <label className="block space-y-1.5">
+        <label htmlFor="device-name" className="block space-y-1.5">
           <span className="text-sm font-medium">{wt('pair.deviceName')}</span>
-          <input
+          <Input
             value={name}
             maxLength={DEVICE_NAME_MAX_LENGTH}
             disabled={busy}
             onChange={(event) => setName(event.target.value)}
+            id="device-name"
             data-testid="device-name"
-            className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:focus-ring disabled:opacity-60"
           />
         </label>
         <Button
@@ -97,14 +102,14 @@ export function PairPage({ fragment }: { fragment: string }) {
           </p>
         )}
         {step.kind === 'awaiting' && (
-          <p className="text-sm text-warning" role="status" data-testid="awaiting">
+          <ErrorNote tone="warning" className="text-sm" data-testid="awaiting">
             {wt('pair.awaiting', { name: step.hostName })}
-          </p>
+          </ErrorNote>
         )}
         {step.kind === 'failed' && (
-          <ErrorText>{wt('pair.failed', { error: step.error })}</ErrorText>
+          <ErrorNote className="text-sm">{wt('pair.failed', { error: step.error })}</ErrorNote>
         )}
-        {supported === false && <ErrorText>{wt('pair.unsupported')}</ErrorText>}
+        {supported === false && <ErrorNote className="text-sm">{wt('pair.unsupported')}</ErrorNote>}
       </form>
     </ShellFrame>
   );

@@ -36,6 +36,9 @@ describe('hosting headers', () => {
     expect(PRODUCTION_CSP.split('; ').find((d) => d.startsWith('script-src'))).toBe(
       "script-src 'self' 'wasm-unsafe-eval'",
     );
+    expect(PRODUCTION_CSP.split('; ').find((d) => d.startsWith('worker-src'))).toBe(
+      "worker-src 'self' blob:",
+    );
     expect(DEVELOPMENT_CSP).toContain('ws:');
   });
 });

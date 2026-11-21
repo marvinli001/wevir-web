@@ -24,11 +24,3 @@ export function ShellFrame({
     </main>
   );
 }
-
-export function ErrorText({ children }: { children: ReactNode }) {
-  return (
-    <p role="alert" className="text-sm text-destructive">
-      {children}
-    </p>
-  );
-}

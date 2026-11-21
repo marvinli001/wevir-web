@@ -3,13 +3,14 @@
 //
 // - Scripts only from this origin: no inline scripts, no third-party scripts. 'wasm-unsafe-eval' is for the code
 //   highlighter's WebAssembly engine (Shiki), as in the desktop app.
+// - The HEIC decoder runs in a Blob worker when the browser cannot decode the image natively.
 // - connect-src 'self' wss: the relay is any wss:// address the paired computer names (official or self-hosted).
 // - style-src allows inline styles: the renderer's animation libraries insert <style> elements, and a static host
 //   cannot hand out a per-response nonce. Scripts stay strict.
 export const PRODUCTION_CSP = [
   "default-src 'self'",
   "script-src 'self' 'wasm-unsafe-eval'",
-  "worker-src 'self'",
+  "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",

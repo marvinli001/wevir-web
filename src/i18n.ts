@@ -2,11 +2,12 @@
 // renderer chose (settings, else the system's). Names and noun phrases only, as in the desktop app.
 
 import { currentLocale, type Locale } from '@wevir-renderer';
+import { t } from '@/i18n';
 
 const en = {
   'computers.title': 'Computers',
   'computers.empty': 'No computers',
-  'computers.add': 'On the computer: Settings → Devices → Add web device',
+  'computers.add': 'On the computer: {path}',
   'computers.open': 'Open',
   'computers.rename': 'Rename',
   'computers.remove': 'Remove',
@@ -49,7 +50,7 @@ type Catalog = Record<WebMessageKey, string>;
 const zhCN: Catalog = {
   'computers.title': '电脑',
   'computers.empty': '没有电脑',
-  'computers.add': '在电脑上：设置 → 设备 → 添加网页设备',
+  'computers.add': '在电脑上：{path}',
   'computers.open': '打开',
   'computers.rename': '重命名',
   'computers.remove': '移除',
@@ -89,7 +90,7 @@ const zhCN: Catalog = {
 const zhTW: Catalog = {
   'computers.title': '電腦',
   'computers.empty': '沒有電腦',
-  'computers.add': '在電腦上：設定 → 裝置 → 新增網頁裝置',
+  'computers.add': '在電腦上：{path}',
   'computers.open': '開啟',
   'computers.rename': '重新命名',
   'computers.remove': '移除',
@@ -129,7 +130,7 @@ const zhTW: Catalog = {
 const fr: Catalog = {
   'computers.title': 'Ordinateurs',
   'computers.empty': 'Aucun ordinateur',
-  'computers.add': 'Sur l’ordinateur : Réglages → Appareils → Ajouter un appareil web',
+  'computers.add': 'Sur l’ordinateur : {path}',
   'computers.open': 'Ouvrir',
   'computers.rename': 'Renommer',
   'computers.remove': 'Retirer',
@@ -170,7 +171,7 @@ const fr: Catalog = {
 const de: Catalog = {
   'computers.title': 'Computer',
   'computers.empty': 'Keine Computer',
-  'computers.add': 'Auf dem Computer: Einstellungen → Geräte → Webgerät hinzufügen',
+  'computers.add': 'Auf dem Computer: {path}',
   'computers.open': 'Öffnen',
   'computers.rename': 'Umbenennen',
   'computers.remove': 'Entfernen',
@@ -210,7 +211,7 @@ const de: Catalog = {
 const it: Catalog = {
   'computers.title': 'Computer',
   'computers.empty': 'Nessun computer',
-  'computers.add': 'Sul computer: Impostazioni → Dispositivi → Aggiungi dispositivo web',
+  'computers.add': 'Sul computer: {path}',
   'computers.open': 'Apri',
   'computers.rename': 'Rinomina',
   'computers.remove': 'Rimuovi',
@@ -250,7 +251,7 @@ const it: Catalog = {
 const es: Catalog = {
   'computers.title': 'Ordenadores',
   'computers.empty': 'Sin ordenadores',
-  'computers.add': 'En el ordenador: Ajustes → Dispositivos → Añadir dispositivo web',
+  'computers.add': 'En el ordenador: {path}',
   'computers.open': 'Abrir',
   'computers.rename': 'Renombrar',
   'computers.remove': 'Quitar',
@@ -291,7 +292,7 @@ const es: Catalog = {
 const ja: Catalog = {
   'computers.title': 'コンピュータ',
   'computers.empty': 'コンピュータなし',
-  'computers.add': 'コンピュータで：設定 → デバイス → Web デバイスを追加',
+  'computers.add': 'コンピュータで：{path}',
   'computers.open': '開く',
   'computers.rename': '名前を変更',
   'computers.remove': '削除',
@@ -331,7 +332,7 @@ const ja: Catalog = {
 const ko: Catalog = {
   'computers.title': '컴퓨터',
   'computers.empty': '컴퓨터 없음',
-  'computers.add': '컴퓨터에서: 설정 → 기기 → 웹 기기 추가',
+  'computers.add': '컴퓨터에서: {path}',
   'computers.open': '열기',
   'computers.rename': '이름 변경',
   'computers.remove': '제거',
@@ -371,7 +372,7 @@ const ko: Catalog = {
 const ru: Catalog = {
   'computers.title': 'Компьютеры',
   'computers.empty': 'Нет компьютеров',
-  'computers.add': 'На компьютере: Настройки → Устройства → Добавить веб-устройство',
+  'computers.add': 'На компьютере: {path}',
   'computers.open': 'Открыть',
   'computers.rename': 'Переименовать',
   'computers.remove': 'Удалить',
@@ -424,4 +425,14 @@ export const CATALOGS: Record<Locale, Catalog> = {
 export function wt(key: WebMessageKey, params: Record<string, string> = {}): string {
   const template = CATALOGS[currentLocale()]?.[key] ?? en[key];
   return template.replace(/\{(\w+)\}/g, (match, name: string) => params[name] ?? match);
+}
+
+export function pairingInstructions(): string {
+  const path = [
+    t('settings.title'),
+    t('settings.tab.devices'),
+    t('settings.devices.remote'),
+    t('settings.devices.addWeb'),
+  ].join(' → ');
+  return wt('computers.add', { path });
 }

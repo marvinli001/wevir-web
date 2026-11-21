@@ -1,13 +1,16 @@
 // `/computers`: the computers this browser is paired with. Add one (scan or paste its pairing link), open one (it
 // becomes the current one and the app connects to it), rename it here, or remove it (the device key is deleted; the
 // computer still lists this device until it is removed there too).
+
 import { Button, currentLocale } from '@wevir-renderer';
 import { Monitor, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { ErrorNote } from '@/components/error-note';
+import { Input } from '@/components/ui/input';
 import { AddComputerDialog } from './add-computer-dialog';
-import { wt } from './i18n';
+import { pairingInstructions, wt } from './i18n';
 import { pageUrl } from './paths';
-import { ErrorText, ShellFrame } from './shell-frame';
+import { ShellFrame } from './shell-frame';
 import {
   type ComputerRecord,
   computerName,
@@ -38,11 +41,11 @@ export function ComputersPage() {
         </Button>
       }
     >
-      {error && <ErrorText>{error}</ErrorText>}
+      {error && <ErrorNote className="text-sm">{error}</ErrorNote>}
       {computers !== undefined && computers.length === 0 && (
         <div className="rounded-xl border border-border bg-card px-4 py-6 text-center">
           <p className="font-medium">{wt('computers.empty')}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{wt('computers.add')}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{pairingInstructions()}</p>
         </div>
       )}
       {computers !== undefined && computers.length > 0 && (
@@ -102,15 +105,14 @@ function ComputerRow({
             void rename();
           }}
         >
-          <input
+          <Input
             value={draft}
             aria-label={wt('computers.name')}
             onChange={(event) => setDraft(event.target.value)}
             maxLength={64}
-            // biome-ignore lint/a11y/noAutofocus: the field appears because the user asked to rename.
             autoFocus
             onFocus={(event) => event.currentTarget.select()}
-            className="h-8 min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:focus-ring"
+            className="flex-1"
           />
           <Button size="sm" type="submit">
             {wt('computers.save')}

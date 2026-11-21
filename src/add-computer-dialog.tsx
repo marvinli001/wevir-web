@@ -1,5 +1,3 @@
-// "Add computer": the pairing link the computer shows (Settings → Devices → Add web device), read from its QR code with
-// the camera or pasted. Either way the link opens the pairing page, which takes the secret out of the address bar.
 import {
   Button,
   Dialog,
@@ -10,11 +8,12 @@ import {
   Segmented,
 } from '@wevir-renderer';
 import { useEffect, useRef, useState } from 'react';
-import { type WebMessageKey, wt } from './i18n';
+import { ErrorNote } from '@/components/error-note';
+import { Input } from '@/components/ui/input';
+import { pairingInstructions, type WebMessageKey, wt } from './i18n';
 import { pairingLinkFragment } from './pairing';
 import { pageUrl } from './paths';
 import { type CameraError, cameraError, createQrDetector, openCamera } from './qr-scan';
-import { ErrorText } from './shell-frame';
 
 type Mode = 'scan' | 'paste';
 
@@ -45,7 +44,7 @@ export function AddComputerDialog({
       <DialogContent className="sm:max-w-md" data-testid="add-computer">
         <DialogHeader>
           <DialogTitle>{wt('add.title')}</DialogTitle>
-          <DialogDescription>{wt('computers.add')}</DialogDescription>
+          <DialogDescription>{pairingInstructions()}</DialogDescription>
         </DialogHeader>
         <div>
           <Segmented
@@ -172,15 +171,13 @@ function Scanner() {
             {state.kind === 'starting' ? (
               <span role="status">{wt('scan.starting')}</span>
             ) : (
-              <span role="alert" data-testid="scan-error">
-                {wt(CAMERA_ERROR[state.error])}
-              </span>
+              <ErrorNote data-testid="scan-error">{wt(CAMERA_ERROR[state.error])}</ErrorNote>
             )}
           </div>
         )}
       </div>
       {state.kind === 'scanning' && state.notice !== undefined && (
-        <ErrorText>{wt(state.notice)}</ErrorText>
+        <ErrorNote className="text-sm">{wt(state.notice)}</ErrorNote>
       )}
     </div>
   );
@@ -200,25 +197,23 @@ function PasteLink() {
         else setError(link.kind === 'no_relay' ? 'pair.noRelay' : 'pair.invalid');
       }}
     >
-      <label className="block space-y-1.5">
+      <label htmlFor="pairing-link" className="block space-y-1.5">
         <span className="text-sm font-medium">{wt('add.link')}</span>
-        <input
+        <Input
           value={text}
           onChange={(event) => {
             setText(event.target.value);
             setError(undefined);
           }}
-          // biome-ignore lint/a11y/noAutofocus: the field appears because the user chose to paste a link.
           autoFocus
           autoComplete="off"
           spellCheck={false}
-          placeholder={`${location.origin}${pageUrl('pair')}#…`}
           aria-invalid={error !== undefined}
+          id="pairing-link"
           data-testid="pairing-link"
-          className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:focus-ring aria-invalid:border-destructive"
         />
       </label>
-      {error !== undefined && <ErrorText>{wt(error)}</ErrorText>}
+      {error !== undefined && <ErrorNote className="text-sm">{wt(error)}</ErrorNote>}
       <Button type="submit" className="w-full" disabled={text.trim() === ''}>
         {wt('add.continue')}
       </Button>
