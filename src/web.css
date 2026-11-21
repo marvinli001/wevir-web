@@ -4,6 +4,13 @@
 @source "../.wevir/apps/desktop/src/renderer/src";
 @source "./";
 
+@layer components {
+  /* translate-y-0 on the search popup uses Tailwind's x offset instead of the dialog's translate. */
+  [data-search-dialog] {
+    --tw-translate-x: -50%;
+  }
+}
+
 /* Touch browsers zoom focused fields below 16px; override the renderer's layered font utilities. */
 @media (any-pointer: coarse) {
   input,
